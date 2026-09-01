@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerPoint Image & Text Editor Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 60px 20px;
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: #ff6b6b;
+            background: linear-gradient(145deg, #fff5f5, #ffe8e8);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #ff6b6b;
+            background: linear-gradient(145deg, #fff5f5, #ffe8e8);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .upload-text {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .upload-subtext {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn.text-btn {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+
+        .btn.text-btn:hover {
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .processing {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff6b6b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 20px;
+            border: none;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #eee;
+        }
+
+        .image-info {
+            margin-bottom: 15px;
+        }
+
+        .image-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .image-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .replace-section {
+            display: block;
+        }
+
+        .replace-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            background: linear-gradient(145deg, #f8f9fa, #ffffff);
+            transition: all 0.3s ease;
+        }
+
+        .replace-input:hover {
+            border-color: #ff6b6b;
+            background: linear-gradient(145deg, #fff5f5, #ffffff);
+        }
+
+        .text-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .slide-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .slide-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .slide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .slide-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .slide-number {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .slide-actions {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .slide-action-btn {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .save-all-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .save-all-btn:hover {
+            background: #218838;
+        }
+
+        .reset-all-btn {
+            background: #6c757d;
+            color: white;
+        }
+
+        .reset-all-btn:hover {
+            background: #545b62;
+        }
+
+        .text-elements {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .text-element {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .text-element:hover {
+            background: #fff;
+            border-color: #4facfe;
+        }
+
+        .text-element.modified {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+
+        .text-element-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .text-label {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .text-type-badge {
+            background: #4facfe;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .word-count {
+            font-size: 0.8rem;
+            color: #999;
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 10px;
+        }
+
+        .text-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .text-original-section,
+        .text-edit-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .text-original {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 0.95rem;
+            color: #333;
+            line-height: 1.5;
+            max-height: 120px;
+            overflow-y: auto;
+            min-height: 80px;
+            white-space: pre-wrap;
+        }
+
+        .text-edit {
+            width: 100%;
+            min-height: 100px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            resize: vertical;
+            transition: all 0.3s ease;
+            line-height: 1.5;
+            background: white;
+        }
+
+        .text-edit:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .text-edit.modified {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+
+        .text-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .text-save-btn {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .text-save-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        .text-save-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .text-reset-btn {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .text-reset-btn:hover {
+            background: #545b62;
+            transform: translateY(-1px);
+        }
+
+        .text-preview-btn {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .text-preview-btn:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+
+        .status {
+            margin-top: 10px;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .auto-save-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .auto-save-indicator.show {
+            opacity: 1;
+        }
+
+        .download-section {
+            text-align: center;
+            margin-top: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            border-radius: 15px;
+            color: white;
+            display: none;
+        }
+
+        .download-section h3 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .download-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .download-btn:hover {
+            background: white;
+            color: #4facfe;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            min-width: 150px;
+            transition: transform 0.3s ease;
+        }
+
+        .stat:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4facfe;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .changes-indicator {
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-left: 10px;
+        }
+
+        .search-filter {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .filter-btn {
+            padding: 10px 16px;
+            border: 2px solid #ddd;
+            background: white;
+            color: #666;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .filter-btn.active {
+            background: #4facfe;
+            color: white;
+            border-color: #4facfe;
+        }
+
+        .filter-btn:hover {
+            border-color: #4facfe;
+            color: #4facfe;
+        }
+
+        .filter-btn.active:hover {
+            background: #3590e8;
+        }
+
+        @media (max-width: 768px) {
+            .text-comparison {
+                grid-template-columns: 1fr;
+            }
+
+            .text-content {
+                grid-template-columns: 1fr;
+            }
+
+            .search-filter {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .text-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PowerPoint Editor</h1>
+            <p>Replace images and edit text in your PowerPoint presentations</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <span class="upload-icon">📎</span>
+                    <div class="upload-text">Drop your PowerPoint file here</div>
+                    <div class="upload-subtext">or click to browse (.pptx files only)</div>
+                    <input type="file" id="fileInput" class="file-input" accept=".pptx"
+                        onchange="handleFileSelect(event)">
+                </div>
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+
+            <div class="processing" id="processingSection">
+                <div class="spinner"></div>
+                <h3>Processing your PowerPoint file...</h3>
+                <p>Extracting images and text content for editing</p>
+            </div>
+
+            <div class="content-section" id="contentSection">
+                <div class="stats" id="statsSection">
+                    <div class="stat">
+                        <div class="stat-number" id="slideCount">0</div>
+                        <div class="stat-label">Slides</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number" id="imageCount">0</div>
+                        <div class="stat-label">Images</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number" id="textCount">0</div>
+                        <div class="stat-label">Text Elements</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number" id="changesCount">0</div>
+                        <div class="stat-label">Changes Made</div>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('images')">
+                        📸 Image Replacement
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('text')">
+                        ✏️ Text Editing <span id="textChangesIndicator" class="changes-indicator"
+                            style="display: none;">0</span>
+                    </button>
+                </div>
+
+                <div id="imagesTab" class="tab-content active">
+                    <div class="images-grid" id="imagesGrid"></div>
+                </div>
+
+                <div id="textTab" class="tab-content">
+                    <div class="search-filter">
+                        <input type="text" id="textSearchInput" class="search-input"
+                            placeholder="Search text content..." oninput="filterTextElements()">
+                        <button class="filter-btn active" id="filterAll" onclick="setTextFilter('all')">All</button>
+                        <button class="filter-btn" id="filterModified"
+                            onclick="setTextFilter('modified')">Modified</button>
+                        <button class="filter-btn" id="filterUnmodified"
+                            onclick="setTextFilter('unmodified')">Original</button>
+                    </div>
+                    <div class="text-content" id="textContent"></div>
+                </div>
+
+                <div class="download-section" id="downloadSection">
+                    <h3>✨ Your presentation is ready!</h3>
+                    <p style="margin-bottom: 20px;">All changes have been processed</p>
+                    <button class="btn download-btn" id="downloadBtn" onclick="downloadModifiedPPT()">
+                        Download Modified PowerPoint
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let originalZip = null;
+        let modifiedZip = null;
+        let imageReplacements = {};
+        let textChanges = {};
+        let slideTexts = {};
+        let totalChanges = 0;
+        let autoSaveTimeout = null;
+        let currentTextFilter = 'all';
+
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tab + 'Tab').classList.add('active');
+        }
+
+        function updateStats() {
+            document.getElementById('changesCount').textContent = totalChanges;
+            const textChangesCount = Object.keys(textChanges).length;
+            const indicator = document.getElementById('textChangesIndicator');
+            if (textChangesCount > 0) {
+                indicator.textContent = textChangesCount;
+                indicator.style.display = 'inline';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+
+        async function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.pptx')) {
+                showError('Please select a .pptx file');
+                return;
+            }
+
+            hideError();
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('processingSection').style.display = 'block';
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                originalZip = await JSZip.loadAsync(arrayBuffer);
+                modifiedZip = originalZip.clone();
+
+                await Promise.all([
+                    extractAndDisplayImages(),
+                    extractAndDisplayText()
+                ]);
+
+                document.getElementById('processingSection').style.display = 'none';
+                document.getElementById('contentSection').style.display = 'block';
+            } catch (error) {
+                console.error('Error processing file:', error);
+                showError('Error processing PowerPoint file. Please ensure it\'s a valid .pptx file.');
+                document.getElementById('processingSection').style.display = 'none';
+                document.getElementById('uploadSection').style.display = 'block';
+            }
+        }
+
+        async function extractAndDisplayImages() {
+            const imagesGrid = document.getElementById('imagesGrid');
+            imagesGrid.innerHTML = '';
+
+            const mediaFiles = [];
+
+            originalZip.forEach((relativePath, zipEntry) => {
+                if (relativePath.startsWith('ppt/media/') && !zipEntry.dir) {
+                    const fileName = relativePath.split('/').pop();
+                    if (fileName.match(/\.(jpg|jpeg|png|gif|bmp|svg)$/i)) {
+                        mediaFiles.push({
+                            path: relativePath,
+                            name: fileName,
+                            zipEntry: zipEntry
+                        });
+                    }
+                }
+            });
+
+            document.getElementById('imageCount').textContent = mediaFiles.length;
+
+            if (mediaFiles.length === 0) {
+                imagesGrid.innerHTML = '<p style="text-align: center; color: #666; font-size: 1.2rem; grid-column: 1 / -1;">No images found in this PowerPoint file.</p>';
+                return;
+            }
+
+            for (const mediaFile of mediaFiles) {
+                const imageCard = await createImageCard(mediaFile);
+                imagesGrid.appendChild(imageCard);
+            }
+        }
+
+        async function createImageCard(mediaFile) {
+            const card = document.createElement('div');
+            card.className = 'image-card';
+
+            const imageData = await originalZip.file(mediaFile.path).async('blob');
+            const imageUrl = URL.createObjectURL(imageData);
+
+            const img = new Image();
+            img.src = imageUrl;
+            await new Promise(resolve => img.onload = resolve);
+
+            const formatFileSize = (bytes) => {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+
+            card.innerHTML = `
+                <img src="${imageUrl}" alt="${mediaFile.name}" class="image-preview">
+                <div class="image-info">
+                    <div class="image-name">${mediaFile.name}</div>
+                    <div class="image-details">
+                        ${img.width} × ${img.height} pixels • ${formatFileSize(imageData.size)}
+                    </div>
+                </div>
+                <div class="replace-section">
+                    <input type="file" class="replace-input" accept="image/*" onchange="handleImageReplace('${mediaFile.path}', this)" placeholder="Click to choose a replacement image">
+                </div>
+                <div class="status" id="status-${mediaFile.path.replace(/[^a-zA-Z0-9]/g, '_')}" style="display: none;"></div>
+            `;
+
+            return card;
+        }
+
+        async function extractAndDisplayText() {
+            const textContent = document.getElementById('textContent');
+            textContent.innerHTML = '';
+
+            let slideCount = 0;
+            let totalTextElements = 0;
+
+            // Process slide files
+            const slidePromises = [];
+            originalZip.forEach((relativePath, zipEntry) => {
+                if (relativePath.match(/^ppt\/slides\/slide\d+\.xml$/) && !zipEntry.dir) {
+                    slideCount++;
+                    const slideNumber = relativePath.match(/slide(\d+)\.xml$/)[1];
+                    slidePromises.push(
+                        zipEntry.async('string').then(xmlContent =>
+                            createSlideCard(slideNumber, xmlContent, relativePath)
+                        ).catch(error => {
+                            console.error('Error processing slide:', error);
+                            return null;
+                        })
+                    );
+                }
+            });
+
+            const slideCards = await Promise.all(slidePromises);
+            slideCards
+                .filter(card => card !== null)
+                .sort((a, b) => parseInt(a.slideNumber) - parseInt(b.slideNumber))
+                .forEach(card => {
+                    textContent.appendChild(card.element);
+                    totalTextElements += card.textElementCount || 0;
+                });
+
+            document.getElementById('slideCount').textContent = slideCount;
+            document.getElementById('textCount').textContent = document.querySelectorAll('.text-element').length;
+        }
+
+        async function createSlideCard(slideNumber, xmlContent, slidePath) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+
+            // Extract text elements from the slide
+            const textElements = xmlDoc.querySelectorAll('a\\:t, t');
+
+            if (textElements.length === 0) {
+                return null; // Skip slides without text
+            }
+
+            const card = document.createElement('div');
+            card.className = 'slide-card';
+            card.setAttribute('data-slide', slideNumber);
+
+            const slideTitle = `Slide ${slideNumber}`;
+
+            let textElementsHtml = '';
+            let validTextCount = 0;
+
+            textElements.forEach((textEl, index) => {
+                const text = textEl.textContent.trim();
+                if (text && text.length > 0) {
+                    const elementId = `${slidePath}-${index}`;
+                    const cleanId = elementId.replace(/[^a-zA-Z0-9]/g, '_');
+                    const wordCount = text.split(/\s+/).length;
+                    const textType = determineTextType(text);
+
+                    textElementsHtml += `
+                        <div class="text-element" data-element-id="${cleanId}" data-original-text="${text.replace(/"/g, '&quot;')}">
+                            <div class="auto-save-indicator" id="autosave-${cleanId}">Auto-saved</div>
+                            <div class="text-element-header">
+                                <div class="text-label">
+                                    Text Element ${validTextCount + 1}
+                                    <span class="text-type-badge">${textType}</span>
+                                </div>
+                                <div class="word-count" id="wordcount-${cleanId}">${wordCount} words</div>
+                            </div>
+                            <div class="text-comparison">
+                                <div class="text-original-section">
+                                    <div class="section-header">Original Text</div>
+                                    <div class="text-original">${text}</div>
+                                </div>
+                                <div class="text-edit-section">
+                                    <div class="section-header">Your Edit</div>
+                                    <textarea class="text-edit" id="edit-${cleanId}" 
+                                        placeholder="Edit the text content here..." 
+                                        oninput="handleTextInput('${slidePath}', ${index}, '${cleanId}')">${text}</textarea>
+                                </div>
+                            </div>
+                            <div class="text-actions">
+                                <button class="text-preview-btn" onclick="previewTextChange('${cleanId}')">👁️ Preview</button>
+                                <button class="text-reset-btn" onclick="resetText('${cleanId}', '${text.replace(/'/g, "\\'")}')">↺ Reset</button>
+                                <button class="text-save-btn" id="save-${cleanId}" onclick="saveTextChange('${slidePath}', ${index}, '${cleanId}')" disabled>💾 Save</button>
+                            </div>
+                            <div class="status" id="text-status-${cleanId}" style="display: none;"></div>
+                        </div>
+                    `;
+
+                    // Store original text for reference
+                    if (!slideTexts[slidePath]) {
+                        slideTexts[slidePath] = {};
+                    }
+                    slideTexts[slidePath][index] = text;
+                    validTextCount++;
+                }
+            });
+
+            card.innerHTML = `
+                <div class="slide-header">
+                    <div class="slide-title">${slideTitle}</div>
+                    <div class="slide-number">${validTextCount} text elements</div>
+                </div>
+                <div class="slide-actions">
+                    <button class="slide-action-btn save-all-btn" onclick="saveAllSlideChanges('${slidePath}')">💾 Save All Changes</button>
+                    <button class="slide-action-btn reset-all-btn" onclick="resetAllSlideChanges('${slidePath}')">↺ Reset All</button>
+                </div>
+                <div class="text-elements">
+                    ${textElementsHtml}
+                </div>
+            `;
+
+            return {
+                element: card,
+                textElementCount: validTextCount,
+                slideNumber: parseInt(slideNumber)
+            };
+        }
+
+        function determineTextType(text) {
+            if (text.length < 50) return 'Title';
+            if (text.includes('•') || text.includes('-') || text.match(/^\d+\./)) return 'Bullet';
+            return 'Paragraph';
+        }
+
+        function handleTextInput(slidePath, textIndex, elementId) {
+            const textArea = document.getElementById(`edit-${elementId}`);
+            const saveBtn = document.getElementById(`save-${elementId}`);
+            const element = document.querySelector(`[data-element-id="${elementId}"]`);
+            const wordCountEl = document.getElementById(`wordcount-${elementId}`);
+            const originalText = element.getAttribute('data-original-text');
+
+            // Update word count
+            const currentText = textArea.value.trim();
+            const wordCount = currentText.split(/\s+/).filter(word => word.length > 0).length;
+            wordCountEl.textContent = `${wordCount} words`;
+
+            // Check if text has changed
+            const hasChanged = currentText !== originalText;
+            saveBtn.disabled = !hasChanged;
+
+            if (hasChanged) {
+                textArea.classList.add('modified');
+                element.classList.add('modified');
+                saveBtn.style.background = '#28a745';
+            } else {
+                textArea.classList.remove('modified');
+                element.classList.remove('modified');
+                saveBtn.style.background = '#6c757d';
+            }
+
+            // Auto-save after 2 seconds of inactivity
+            clearTimeout(autoSaveTimeout);
+            if (hasChanged) {
+                autoSaveTimeout = setTimeout(() => {
+                    saveTextChange(slidePath, textIndex, elementId, true);
+                }, 2000);
+            }
+        }
+
+        function previewTextChange(elementId) {
+            const textArea = document.getElementById(`edit-${elementId}`);
+            const originalDiv = document.querySelector(`[data-element-id="${elementId}"] .text-original`);
+            const currentText = textArea.value.trim();
+
+            // Temporarily show the new text in the original preview
+            const originalContent = originalDiv.textContent;
+            originalDiv.textContent = currentText;
+            originalDiv.style.background = '#e8f4f8';
+            originalDiv.style.border = '2px solid #17a2b8';
+
+            // Revert after 3 seconds
+            setTimeout(() => {
+                originalDiv.textContent = originalContent;
+                originalDiv.style.background = '#f8f9fa';
+                originalDiv.style.border = '2px solid #e9ecef';
+            }, 3000);
+        }
+
+        async function saveTextChange(slidePath, textIndex, elementId, isAutoSave = false) {
+            const textArea = document.getElementById(`edit-${elementId}`);
+            const statusEl = document.getElementById(`text-status-${elementId}`);
+            const saveBtn = document.getElementById(`save-${elementId}`);
+            const element = document.querySelector(`[data-element-id="${elementId}"]`);
+            const autoSaveIndicator = document.getElementById(`autosave-${elementId}`);
+            const newText = textArea.value.trim();
+            const originalText = element.getAttribute('data-original-text');
+
+            if (newText === originalText) {
+                statusEl.style.display = 'none';
+                return;
+            }
+
+            if (!isAutoSave) {
+                statusEl.style.display = 'block';
+                statusEl.className = 'status';
+                statusEl.innerHTML = '💾 Saving changes...';
+                saveBtn.disabled = true;
+            }
+
+            try {
+                // Get the current slide XML
+                const slideXml = await modifiedZip.file(slidePath).async('string');
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(slideXml, 'text/xml');
+
+                // Find and update the text element
+                const textElements = xmlDoc.querySelectorAll('a\\:t, t');
+                if (textElements[textIndex]) {
+                    textElements[textIndex].textContent = newText;
+
+                    // Serialize back to XML
+                    const serializer = new XMLSerializer();
+                    const updatedXml = serializer.serializeToString(xmlDoc);
+
+                    // Update the zip
+                    modifiedZip.file(slidePath, updatedXml);
+
+                    if (isAutoSave) {
+                        autoSaveIndicator.classList.add('show');
+                        setTimeout(() => autoSaveIndicator.classList.remove('show'), 2000);
+                    } else {
+                        statusEl.className = 'status success';
+                        statusEl.innerHTML = '✅ Text updated successfully';
+                        saveBtn.disabled = true;
+                    }
+
+                    // Track changes
+                    const changeKey = `${slidePath}-${textIndex}`;
+                    if (!textChanges[changeKey]) {
+                        textChanges[changeKey] = true;
+                        totalChanges++;
+                        updateStats();
+                    }
+
+                    updateDownloadSection();
+                } else {
+                    throw new Error('Text element not found');
+                }
+
+            } catch (error) {
+                console.error('Error saving text change:', error);
+                if (!isAutoSave) {
+                    statusEl.className = 'status error';
+                    statusEl.innerHTML = '❌ Error saving text';
+                    saveBtn.disabled = false;
+                }
+            }
+        }
+
+        function resetText(elementId, originalText) {
+            const textArea = document.getElementById(`edit-${elementId}`);
+            const statusEl = document.getElementById(`text-status-${elementId}`);
+            const saveBtn = document.getElementById(`save-${elementId}`);
+            const element = document.querySelector(`[data-element-id="${elementId}"]`);
+            const wordCountEl = document.getElementById(`wordcount-${elementId}`);
+
+            textArea.value = originalText;
+            textArea.classList.remove('modified');
+            element.classList.remove('modified');
+            saveBtn.disabled = true;
+            saveBtn.style.background = '#6c757d';
+            statusEl.style.display = 'none';
+
+            // Update word count
+            const wordCount = originalText.split(/\s+/).filter(word => word.length > 0).length;
+            wordCountEl.textContent = `${wordCount} words`;
+        }
+
+        function saveAllSlideChanges(slidePath) {
+            const slideCard = document.querySelector(`[data-slide]`);
+            const textElements = slideCard.querySelectorAll('.text-element');
+
+            textElements.forEach(element => {
+                const elementId = element.getAttribute('data-element-id');
+                const textArea = element.querySelector('.text-edit');
+                const originalText = element.getAttribute('data-original-text');
+
+                if (textArea.value.trim() !== originalText) {
+                    const saveBtn = element.querySelector('.text-save-btn');
+                    if (!saveBtn.disabled) {
+                        saveBtn.click();
+                    }
+                }
+            });
+        }
+
+        function resetAllSlideChanges(slidePath) {
+            const slideCard = document.querySelector(`[data-slide]`);
+            const textElements = slideCard.querySelectorAll('.text-element');
+
+            textElements.forEach(element => {
+                const elementId = element.getAttribute('data-element-id');
+                const originalText = element.getAttribute('data-original-text');
+                const resetBtn = element.querySelector('.text-reset-btn');
+                resetBtn.click();
+            });
+        }
+
+        function setTextFilter(filter) {
+            currentTextFilter = filter;
+
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`filter${filter.charAt(0).toUpperCase() + filter.slice(1)}`).classList.add('active');
+
+            filterTextElements();
+        }
+
+        function filterTextElements() {
+            const searchTerm = document.getElementById('textSearchInput').value.toLowerCase();
+            const textElements = document.querySelectorAll('.text-element');
+
+            textElements.forEach(element => {
+                const elementId = element.getAttribute('data-element-id');
+                const textArea = document.getElementById(`edit-${elementId}`);
+                const originalText = element.getAttribute('data-original-text').toLowerCase();
+                const currentText = textArea.value.toLowerCase();
+                const isModified = element.classList.contains('modified');
+
+                // Check search filter
+                const matchesSearch = !searchTerm ||
+                    originalText.includes(searchTerm) ||
+                    currentText.includes(searchTerm);
+
+                // Check modification filter
+                let matchesFilter = true;
+                if (currentTextFilter === 'modified') {
+                    matchesFilter = isModified;
+                } else if (currentTextFilter === 'unmodified') {
+                    matchesFilter = !isModified;
+                }
+
+                // Show/hide element
+                const slideCard = element.closest('.slide-card');
+                if (matchesSearch && matchesFilter) {
+                    element.style.display = 'block';
+                    slideCard.style.display = 'block';
+                } else {
+                    element.style.display = 'none';
+                }
+            });
+
+            // Hide slide cards that have no visible text elements
+            document.querySelectorAll('.slide-card').forEach(card => {
+                const visibleElements = card.querySelectorAll('.text-element:not([style*="display: none"])');
+                if (visibleElements.length === 0) {
+                    card.style.display = 'none';
+                } else {
+                    card.style.display = 'block';
+                }
+            });
+        }
+
+        async function handleImageReplace(imagePath, inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+
+            const statusEl = document.getElementById(`status-${imagePath.replace(/[^a-zA-Z0-9]/g, '_')}`);
+            statusEl.style.display = 'block';
+            statusEl.className = 'status';
+            statusEl.innerHTML = '📸 Replacing image...';
+
+            try {
+                const newImageData = await file.arrayBuffer();
+                modifiedZip.file(imagePath, newImageData);
+
+                const card = inputElement.closest('.image-card');
+                const preview = card.querySelector('.image-preview');
+                const newImageUrl = URL.createObjectURL(file);
+                preview.src = newImageUrl;
+
+                statusEl.className = 'status success';
+                statusEl.innerHTML = `✅ Replaced with ${file.name}`;
+
+                if (!imageReplacements[imagePath]) {
+                    imageReplacements[imagePath] = true;
+                    totalChanges++;
+                    updateStats();
+                }
+
+                updateDownloadSection();
+
+            } catch (error) {
+                console.error('Error replacing image:', error);
+                statusEl.className = 'status error';
+                statusEl.innerHTML = '❌ Error replacing image';
+            }
+        }
+
+        function updateDownloadSection() {
+            if (totalChanges > 0) {
+                document.getElementById('downloadSection').style.display = 'block';
+            }
+        }
+
+        async function downloadModifiedPPT() {
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = 'Preparing download...';
+
+            try {
+                const content = await modifiedZip.generateAsync({ type: 'blob' });
+
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'modified_presentation.pptx';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                downloadBtn.textContent = 'Download Complete! ✅';
+                setTimeout(() => {
+                    downloadBtn.disabled = false;
+                    downloadBtn.textContent = 'Download Modified PowerPoint';
+                }, 3000);
+
+            } catch (error) {
+                console.error('Error generating download:', error);
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = 'Error - Try Again';
+            }
+        }
+    </script>
+</body>
+
+</html>
